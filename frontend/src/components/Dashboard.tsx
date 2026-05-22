@@ -7,7 +7,6 @@ import {
   updateLastRun,
   filterTasksByType,
   getNotificationTitle,
-  getNotificationPriority,
   getNextScheduledTime
 } from '../services/notificationScheduler';
 
@@ -66,7 +65,6 @@ function Dashboard({ onChatContextChange }: DashboardProps) {
         
         if (tasksToNotify.length > 0) {
           const title = getNotificationTitle(type);
-          const priority = getNotificationPriority(type);
           
           // Show browser notifications
           if ('Notification' in window && Notification.permission === 'granted') {

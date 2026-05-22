@@ -11,13 +11,7 @@ import { UserProfile } from './types';
 import './App.css';
 
 function App() {
-  const [dashboardChatContext, setDashboardChatContext] = useState<{
-    upcomingTasks: import('./types').TaskInstance[];
-    projects: import('./types').Project[];
-  }>({
-    upcomingTasks: [],
-    projects: []
-  });
+  // Removed unused dashboardChatContext state
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem('compliance-tracker-auth') === 'true';
@@ -209,7 +203,7 @@ function App() {
           <Routes>
             <Route
               path="/"
-              element={<Dashboard onChatContextChange={setDashboardChatContext} />}
+              element={<Dashboard />}
             />
             <Route path="/tasks" element={<TasksView />} />
             <Route path="/projects" element={<ProjectList />} />

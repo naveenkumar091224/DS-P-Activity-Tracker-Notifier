@@ -2,679 +2,465 @@
 
 ## Overview
 
-This guide outlines the process of converting the Compliance Tracker web application into a standalone Windows desktop application (.exe) with system tray integration, native notifications, and auto-start capabilities.
+This guide explains how to build, run, and distribute the Compliance Tracker as a Windows desktop application using Electron and Docker.
 
-## Architecture Options
+## Architecture
 
-### Option 1: Electron (Recommended)
-**Pros:**
-- Mature ecosystem with extensive documentation
-- Large community support
-- Rich plugin ecosystem (electron-builder, electron-updater)
-- Better compatibility with existing React/Vite setup
-- Easier to bundle Python backend with electron-builder
+The desktop application uses:
+- **Electron**: Cross-platform desktop framework
+- **Docker Desktop**: Runs backend (FastAPI) and frontend (Vite/React) containers
+- **dockerode**: Node.js Docker API client for container management
+- **electron-builder**: Packages the app as a Windows installer (.exe)
 
-**Cons:**
-- Larger bundle size (~150-200 MB)
-- Higher memory usage
-- Chromium-based (similar to web version)
+## Prerequisites
 
-**Best For:** Quick development, feature-rich applications, when bundle size is not critical
+### Required Software
+1. **Node.js** (v18 or higher)
+2. **Docker Desktop** for Windows
+3. **npm** (comes with Node.js)
 
-### Option 2: Tauri
-**Pros:**
-- Smaller bundle size (~10-20 MB)
-- Lower memory footprint
-- Uses system WebView (Edge WebView2 on Windows)
-- Rust-based backend (more secure)
-- Modern and actively developed
-
-**Cons:**
-- Smaller community
-- Less mature ecosystem
-- Requires Rust toolchain
-- More complex Python backend integration
-
-**Best For:** Performance-critical applications, when bundle size matters
-
-## Recommended Approach: Electron
-
-Given the current tech stack (React + FastAPI/Python), **Electron** is the recommended choice for faster development and better Python integration.
-
----
-
-## Desktop Application Architecture
-
-```
-Compliance-Tracker-Desktop/
-├── electron/                    # Electron main process
-│   ├── main.js                 # Main entry point
-│   ├── preload.js              # Preload script for security
-│   ├── tray.js                 # System tray functionality
-│   └── backend-manager.js      # Python backend process manager
-├── frontend/                    # React frontend (existing)
-│   ├── src/
-│   ├── package.json
-│   └── vite.config.ts
-├── backend/                     # FastAPI backend (existing)
-│   ├── server.py
-│   ├── requirements.txt
-│   └── build/                  # PyInstaller output
-├── resources/                   # Desktop app resources
-│   ├── icon.ico               # Windows icon
-│   ├── icon.png               # PNG icon
-│   └── tray-icon.png          # System tray icon
-├── installer/                   # Installer configuration
-│   └── installer.nsh          # NSIS installer script
-├── package.json                # Root package.json
-└── electron-builder.yml        # Electron builder config
-```
-
----
-
-## Implementation Plan
-
-### Phase 1: Setup Electron Project Structure
-
-#### 1.1 Install Electron Dependencies
+### Installation Steps
 ```bash
-cd Compliance-Tracker-Notifier
-npm init -y  # If no root package.json exists
-npm install --save-dev electron electron-builder electron-is-dev
-npm install --save-dev concurrently wait-on cross-env
+# Install Node.js from https://nodejs.org/
+# Install Docker Desktop from https://www.docker.com/products/docker-desktop/
+
+# Verify installations
+node --version
+npm --version
+docker --version
 ```
 
-#### 1.2 Create Electron Main Process
-**File: `electron/main.js`**
-- Initialize Electron app
-- Create main window
-- Load React frontend
-- Manage Python backend process
-- Handle app lifecycle events
+## Project Structure
 
-#### 1.3 Create Preload Script
-**File: `electron/preload.js`**
-- Expose safe IPC channels to renderer
-- Bridge between frontend and Electron APIs
+```
+Compliance-Tracker-Notifier/
+├── electron/                    # Electron main process files
+│   ├── main.js                 # Main Electron process
+│   ├── preload.js              # Security bridge (context isolation)
+│   └── docker-manager.js       # Docker Desktop & container management
+├── resources/                   # Application icons
+│   ├── icon.ico                # Windows app icon (256x256)
+│   ├── icon.png                # High-res icon (512x512)
+│   └── tray-icon.png           # System tray icon (16x16 or 32x32)
+├── frontend/                    # React frontend (Vite)
+├── backend/                     # FastAPI backend
+├── docker-compose.yml          # Docker services configuration
+└── package.json                # Electron project configuration
+```
 
-#### 1.4 Update Root package.json
+## Building the Desktop Application
+
+### Step 1: Install Dependencies
+
+```bash
+# Navigate to project root
+cd Compliance-Tracker-Notifier
+
+# Install Electron dependencies
+npm install
+```
+
+### Step 2: Build Frontend for Production
+
+```bash
+# Navigate to frontend directory
+cd frontend
+
+# Build production bundle
+npm run build
+
+# Return to root
+cd ..
+```
+
+### Step 3: Create Application Icons
+
+Create the following icons in the `resources/` directory:
+
+1. **icon.ico** (256x256 or multi-resolution)
+   - Main application icon for Windows
+   - Should contain: 16x16, 32x32, 48x48, 256x256
+
+2. **icon.png** (512x512)
+   - High-resolution PNG for installer
+   - Transparent background recommended
+
+3. **tray-icon.png** (16x16 or 32x32)
+   - System tray icon
+   - Simple, recognizable design
+   - Visible on both light and dark backgrounds
+
+**Icon Creation Tools:**
+- Online: https://www.icoconverter.com/
+- Desktop: GIMP, Photoshop, Paint.NET
+- Quick test: Copy any .ico from `C:\Windows\System32\`
+
+### Step 4: Test in Development Mode
+
+```bash
+# Start Electron in development mode
+npm run dev
+```
+
+**What happens:**
+1. Electron checks if Docker Desktop is installed
+2. Starts Docker Desktop if not running
+3. Launches backend and frontend containers via docker-compose
+4. Opens application window loading http://localhost:3001
+5. Creates system tray icon
+
+**Development Mode Features:**
+- Hot reload for Electron code changes
+- DevTools enabled (F12)
+- Console logs visible
+- Container logs accessible via tray menu
+
+### Step 5: Build Windows Installer
+
+```bash
+# Build .exe installer
+npm run build:win
+```
+
+**Build Output:**
+```
+dist-electron/
+├── win-unpacked/                    # Unpacked application files
+│   └── Compliance Tracker.exe       # Executable (not installer)
+└── Compliance Tracker Setup 1.0.0.exe  # Windows installer
+```
+
+**Installer Size:** ~150-200 MB (includes Electron runtime)
+
+## Running the Desktop Application
+
+### First-Time Setup
+
+1. **Install Docker Desktop**
+   - Download from https://www.docker.com/products/docker-desktop/
+   - Run installer and restart computer
+   - Launch Docker Desktop and wait for it to start
+
+2. **Install Compliance Tracker**
+   - Run `Compliance Tracker Setup 1.0.0.exe`
+   - Follow installation wizard
+   - Choose installation directory
+   - Create desktop shortcut (optional)
+
+3. **Launch Application**
+   - Double-click desktop shortcut or
+   - Find in Start Menu: "Compliance Tracker"
+
+### Application Startup Flow
+
+1. **Docker Check**
+   - App verifies Docker Desktop is installed
+   - If not found, shows error dialog with download link
+
+2. **Docker Startup**
+   - If Docker Desktop is not running, app starts it automatically
+   - Shows "Starting Docker Desktop..." message
+   - Waits up to 60 seconds for Docker to be ready
+
+3. **Container Launch**
+   - Runs `docker-compose up -d` in project directory
+   - Starts backend (FastAPI on port 8000)
+   - Starts frontend (Nginx on port 3001)
+   - Waits for backend health check
+
+4. **Window Display**
+   - Opens Electron window loading http://localhost:3001
+   - Window size: 1280x800
+   - Minimum size: 800x600
+
+5. **System Tray**
+   - App minimizes to system tray when closed
+   - Right-click tray icon for menu:
+     - Show/Hide Window
+     - View Container Logs
+     - Restart Containers
+     - Quit Application
+
+## Features
+
+### Auto-Launch on Windows Startup
+- Enabled by default
+- App starts minimized to tray
+- Containers start automatically
+- Disable in system tray menu
+
+### System Tray Integration
+- **Show/Hide**: Toggle main window visibility
+- **View Logs**: Opens terminal with container logs
+- **Restart**: Restarts Docker containers
+- **Quit**: Stops containers and exits app
+
+### Native Notifications
+- Windows 10/11 notification support
+- Task reminders at scheduled times
+- Login notifications
+- Clickable notifications (focus app window)
+
+### Container Management
+- Automatic Docker Desktop startup
+- Health checks for backend readiness
+- Graceful container shutdown on exit
+- Error handling and retry logic
+
+## Configuration
+
+### Electron Configuration (package.json)
+
 ```json
 {
   "name": "compliance-tracker-desktop",
   "version": "1.0.0",
   "main": "electron/main.js",
   "scripts": {
-    "start": "electron .",
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\" \"wait-on http://localhost:3001 && electron .\"",
-    "dev:frontend": "cd frontend && npm run dev",
-    "dev:backend": "cd backend && uvicorn server:app --reload --port 8000",
-    "build": "npm run build:frontend && npm run build:backend && npm run build:electron",
-    "build:frontend": "cd frontend && npm run build",
-    "build:backend": "cd backend && pyinstaller --onefile server.py",
-    "build:electron": "electron-builder"
-  }
-}
-```
-
----
-
-### Phase 2: Bundle Python Backend
-
-#### 2.1 Install PyInstaller
-```bash
-pip install pyinstaller
-```
-
-#### 2.2 Create PyInstaller Spec File
-**File: `backend/server.spec`**
-```python
-# -*- mode: python ; coding: utf-8 -*-
-
-block_cipher = None
-
-a = Analysis(
-    ['server.py'],
-    pathex=[],
-    binaries=[],
-    datas=[
-        ('data', 'data'),  # Include database directory
-    ],
-    hiddenimports=[
-        'uvicorn.logging',
-        'uvicorn.loops',
-        'uvicorn.loops.auto',
-        'uvicorn.protocols',
-        'uvicorn.protocols.http',
-        'uvicorn.protocols.http.auto',
-        'uvicorn.protocols.websockets',
-        'uvicorn.protocols.websockets.auto',
-        'uvicorn.lifespan',
-        'uvicorn.lifespan.on',
-    ],
-    hookspath=[],
-    hooksconfig={},
-    runtime_hooks=[],
-    excludes=[],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=block_cipher,
-    noarchive=False,
-)
-
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
-
-exe = EXE(
-    pyz,
-    a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    [],
-    name='compliance-tracker-backend',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
-    console=False,  # Hide console window
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-    icon='../resources/icon.ico'
-)
-```
-
-#### 2.3 Build Backend Executable
-```bash
-cd backend
-pyinstaller server.spec
-```
-
----
-
-### Phase 3: Electron Main Process Implementation
-
-#### 3.1 Main Window Configuration
-```javascript
-// electron/main.js
-const { app, BrowserWindow, Tray, Menu, nativeImage } = require('electron');
-const path = require('path');
-const isDev = require('electron-is-dev');
-const { spawn } = require('child_process');
-
-let mainWindow;
-let tray;
-let backendProcess;
-
-function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    minWidth: 1024,
-    minHeight: 768,
-    icon: path.join(__dirname, '../resources/icon.ico'),
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
-    }
-  });
-
-  // Load frontend
-  const startUrl = isDev
-    ? 'http://localhost:3001'
-    : `file://${path.join(__dirname, '../frontend/dist/index.html')}`;
-  
-  mainWindow.loadURL(startUrl);
-
-  // Open DevTools in development
-  if (isDev) {
-    mainWindow.webContents.openDevTools();
-  }
-
-  // Handle window close
-  mainWindow.on('close', (event) => {
-    if (!app.isQuitting) {
-      event.preventDefault();
-      mainWindow.hide();
-    }
-  });
-}
-
-function startBackend() {
-  const backendPath = isDev
-    ? path.join(__dirname, '../backend/server.py')
-    : path.join(process.resourcesPath, 'backend', 'compliance-tracker-backend.exe');
-
-  if (isDev) {
-    // Development: Run Python directly
-    backendProcess = spawn('python', [backendPath], {
-      cwd: path.join(__dirname, '../backend')
-    });
-  } else {
-    // Production: Run bundled executable
-    backendProcess = spawn(backendPath, [], {
-      cwd: path.dirname(backendPath)
-    });
-  }
-
-  backendProcess.stdout.on('data', (data) => {
-    console.log(`Backend: ${data}`);
-  });
-
-  backendProcess.stderr.on('data', (data) => {
-    console.error(`Backend Error: ${data}`);
-  });
-
-  backendProcess.on('close', (code) => {
-    console.log(`Backend process exited with code ${code}`);
-  });
-}
-
-function stopBackend() {
-  if (backendProcess) {
-    backendProcess.kill();
-    backendProcess = null;
-  }
-}
-
-app.whenReady().then(() => {
-  startBackend();
-  
-  // Wait for backend to start
-  setTimeout(() => {
-    createWindow();
-    createTray();
-  }, 2000);
-});
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
-
-app.on('before-quit', () => {
-  app.isQuitting = true;
-  stopBackend();
-});
-
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
-});
-```
-
-#### 3.2 System Tray Implementation
-```javascript
-// electron/tray.js
-const { Tray, Menu, nativeImage } = require('electron');
-const path = require('path');
-
-function createTray(mainWindow) {
-  const iconPath = path.join(__dirname, '../resources/tray-icon.png');
-  const trayIcon = nativeImage.createFromPath(iconPath);
-  
-  const tray = new Tray(trayIcon.resize({ width: 16, height: 16 }));
-  
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: 'Show App',
-      click: () => {
-        mainWindow.show();
-      }
-    },
-    {
-      label: 'Hide App',
-      click: () => {
-        mainWindow.hide();
-      }
-    },
-    { type: 'separator' },
-    {
-      label: 'Quit',
-      click: () => {
-        app.isQuitting = true;
-        app.quit();
-      }
-    }
-  ]);
-  
-  tray.setToolTip('Compliance Tracker');
-  tray.setContextMenu(contextMenu);
-  
-  tray.on('click', () => {
-    mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
-  });
-  
-  return tray;
-}
-
-module.exports = { createTray };
-```
-
-#### 3.3 Preload Script
-```javascript
-// electron/preload.js
-const { contextBridge, ipcRenderer } = require('electron');
-
-contextBridge.exposeInMainWorld('electronAPI', {
-  // Notification APIs
-  showNotification: (title, body) => {
-    ipcRenderer.send('show-notification', { title, body });
+    "dev": "electron .",
+    "build:win": "electron-builder --win"
   },
-  
-  // App control
-  minimizeToTray: () => {
-    ipcRenderer.send('minimize-to-tray');
-  },
-  
-  quitApp: () => {
-    ipcRenderer.send('quit-app');
-  }
-});
-```
-
----
-
-### Phase 4: Native Notifications
-
-#### 4.1 Update Frontend Notification Service
-**File: `frontend/src/services/notificationService.ts`**
-```typescript
-export const showDesktopNotification = (title: string, body: string) => {
-  // Check if running in Electron
-  if (window.electronAPI) {
-    window.electronAPI.showNotification(title, body);
-  } else {
-    // Fallback to web notifications
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(title, { body });
+  "build": {
+    "appId": "com.compliancetracker.app",
+    "productName": "Compliance Tracker",
+    "win": {
+      "target": "nsis",
+      "icon": "resources/icon.ico"
     }
   }
-};
+}
 ```
 
-#### 4.2 Handle Notifications in Main Process
-```javascript
-// In electron/main.js
-const { Notification } = require('electron');
+### Docker Configuration (docker-compose.yml)
 
-ipcMain.on('show-notification', (event, { title, body }) => {
-  new Notification({
-    title,
-    body,
-    icon: path.join(__dirname, '../resources/icon.png')
-  }).show();
-});
-```
-
----
-
-### Phase 5: Auto-Start Configuration
-
-#### 5.1 Windows Auto-Start
-```javascript
-// In electron/main.js
-const AutoLaunch = require('auto-launch');
-
-const autoLauncher = new AutoLaunch({
-  name: 'Compliance Tracker',
-  path: app.getPath('exe'),
-});
-
-// Enable auto-start
-app.whenReady().then(() => {
-  autoLauncher.isEnabled().then((isEnabled) => {
-    if (!isEnabled) {
-      autoLauncher.enable();
-    }
-  });
-});
-```
-
-Install dependency:
-```bash
-npm install --save auto-launch
-```
-
----
-
-### Phase 6: Electron Builder Configuration
-
-#### 6.1 Create electron-builder.yml
 ```yaml
-appId: com.companyname.compliancetracker
-productName: Compliance Tracker
-copyright: Copyright © 2024
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./compliance.db
+    volumes:
+      - ./backend:/app
+      - ./backend/compliance.db:/app/compliance.db
 
-directories:
-  buildResources: resources
-  output: dist-electron
-
-files:
-  - electron/**/*
-  - frontend/dist/**/*
-  - resources/**/*
-  - package.json
-
-extraResources:
-  - from: backend/dist/compliance-tracker-backend.exe
-    to: backend/compliance-tracker-backend.exe
-  - from: backend/data
-    to: backend/data
-
-win:
-  target:
-    - nsis
-    - portable
-  icon: resources/icon.ico
-  artifactName: ${productName}-Setup-${version}.${ext}
-
-nsis:
-  oneClick: false
-  allowToChangeInstallationDirectory: true
-  createDesktopShortcut: true
-  createStartMenuShortcut: true
-  shortcutName: Compliance Tracker
-  runAfterFinish: true
-  installerIcon: resources/icon.ico
-  uninstallerIcon: resources/icon.ico
-  license: LICENSE
-
-portable:
-  artifactName: ${productName}-Portable-${version}.${ext}
-
-publish:
-  provider: generic
-  url: https://your-update-server.com
+  frontend:
+    build: ./frontend
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
 ```
 
----
+## Troubleshooting
 
-### Phase 7: Build Process
+### Docker Desktop Not Starting
 
-#### 7.1 Complete Build Script
-```json
-{
-  "scripts": {
-    "prebuild": "npm run clean",
-    "clean": "rimraf dist-electron frontend/dist backend/dist",
-    "build:frontend": "cd frontend && npm run build",
-    "build:backend": "cd backend && pyinstaller server.spec",
-    "build:electron": "electron-builder --win --x64",
-    "build": "npm run build:frontend && npm run build:backend && npm run build:electron",
-    "build:portable": "npm run build:frontend && npm run build:backend && electron-builder --win portable"
-  }
-}
+**Problem:** "Docker Desktop is not running"
+
+**Solutions:**
+1. Manually start Docker Desktop from Start Menu
+2. Restart computer
+3. Reinstall Docker Desktop
+4. Check Windows Services: "Docker Desktop Service" should be running
+
+### Containers Not Starting
+
+**Problem:** "Failed to start containers"
+
+**Solutions:**
+1. Check Docker Desktop is running
+2. Open terminal and run: `docker-compose up`
+3. Check for port conflicts (8000, 3001)
+4. View logs: Right-click tray icon → View Container Logs
+
+### Port Already in Use
+
+**Problem:** "Port 8000 or 3001 already in use"
+
+**Solutions:**
+1. Stop other applications using these ports
+2. Change ports in docker-compose.yml
+3. Restart Docker Desktop
+
+### Application Won't Start
+
+**Problem:** App crashes on startup
+
+**Solutions:**
+1. Check Docker Desktop is installed and running
+2. Delete `node_modules` and run `npm install`
+3. Rebuild frontend: `cd frontend && npm run build`
+4. Check logs in: `%APPDATA%\compliance-tracker-desktop\logs\`
+
+### Icons Not Showing
+
+**Problem:** Default Electron icon appears
+
+**Solutions:**
+1. Ensure icons exist in `resources/` directory
+2. Rebuild application: `npm run build:win`
+3. Clear icon cache: Delete `%LOCALAPPDATA%\IconCache.db`
+
+## Development
+
+### Modifying the Desktop App
+
+1. **Edit Electron Code**
+   ```bash
+   # Edit files in electron/ directory
+   # Test changes
+   npm run dev
+   ```
+
+2. **Edit Frontend**
+   ```bash
+   cd frontend
+   # Make changes to React components
+   npm run dev  # Test in browser
+   npm run build  # Build for Electron
+   ```
+
+3. **Edit Backend**
+   ```bash
+   cd backend
+   # Make changes to FastAPI code
+   # Restart containers via tray menu
+   ```
+
+### Debugging
+
+**Enable DevTools:**
+```javascript
+// In electron/main.js
+mainWindow.webContents.openDevTools();
 ```
 
-#### 7.2 Build Commands
+**View Electron Logs:**
 ```bash
-# Install all dependencies
-npm install
-cd frontend && npm install && cd ..
-cd backend && pip install -r requirements.txt && cd ..
-
-# Build everything
-npm run build
-
-# Output will be in dist-electron/
-# - Compliance Tracker-Setup-1.0.0.exe (Installer)
-# - Compliance Tracker-Portable-1.0.0.exe (Portable)
+# Windows
+%APPDATA%\compliance-tracker-desktop\logs\main.log
 ```
 
----
-
-## Features Comparison: Web vs Desktop
-
-| Feature | Web App | Desktop App |
-|---------|---------|-------------|
-| Installation | Browser only | Windows installer (.exe) |
-| Notifications | Browser notifications | Native Windows notifications |
-| System Tray | ❌ | ✅ System tray icon |
-| Auto-Start | ❌ | ✅ Start with Windows |
-| Offline Mode | ❌ Limited | ✅ Full offline support |
-| Updates | Manual refresh | Auto-update capability |
-| Performance | Browser-dependent | Optimized for desktop |
-| Database | Shared/Server | Local SQLite per user |
-| Port Conflicts | Possible | Managed internally |
-
----
-
-## Desktop-Specific Features to Add
-
-### 1. System Tray Menu
-- Show/Hide window
-- Quick access to recent tasks
-- Notification settings
-- Quit application
-
-### 2. Native Notifications
-- Windows Action Center integration
-- Notification sounds
-- Notification actions (Mark as complete, Snooze)
-
-### 3. Auto-Update
-```javascript
-const { autoUpdater } = require('electron-updater');
-
-autoUpdater.checkForUpdatesAndNotify();
-
-autoUpdater.on('update-available', () => {
-  // Show update notification
-});
-
-autoUpdater.on('update-downloaded', () => {
-  // Prompt user to restart
-});
+**View Container Logs:**
+```bash
+docker-compose logs -f
 ```
-
-### 4. Keyboard Shortcuts
-```javascript
-const { globalShortcut } = require('electron');
-
-app.whenReady().then(() => {
-  // Show/Hide with Ctrl+Shift+C
-  globalShortcut.register('CommandOrControl+Shift+C', () => {
-    mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
-  });
-});
-```
-
-### 5. Context Menu
-```javascript
-const { Menu } = require('electron');
-
-const contextMenu = Menu.buildFromTemplate([
-  { role: 'cut' },
-  { role: 'copy' },
-  { role: 'paste' },
-  { type: 'separator' },
-  { role: 'selectAll' }
-]);
-
-mainWindow.webContents.on('context-menu', (e, params) => {
-  contextMenu.popup(mainWindow, params.x, params.y);
-});
-```
-
----
-
-## Testing Checklist
-
-- [ ] Application starts successfully
-- [ ] Backend process starts automatically
-- [ ] Frontend loads correctly
-- [ ] Login/Authentication works
-- [ ] Database operations work
-- [ ] Native notifications appear
-- [ ] System tray icon appears
-- [ ] System tray menu works
-- [ ] Minimize to tray works
-- [ ] Auto-start on Windows boot works
-- [ ] Application updates work
-- [ ] Installer creates desktop shortcut
-- [ ] Installer creates start menu entry
-- [ ] Uninstaller removes all files
-- [ ] Multiple instances prevention works
-- [ ] Application closes cleanly
-
----
 
 ## Distribution
 
-### Installer (.exe)
-- Full installation with shortcuts
-- Registry entries for auto-start
-- Uninstaller included
-- Size: ~150-200 MB
+### Creating Installer
 
-### Portable (.exe)
-- No installation required
-- Run from any location
-- No registry changes
-- Size: ~150-200 MB
+```bash
+# Build Windows installer
+npm run build:win
 
----
+# Output: dist-electron/Compliance Tracker Setup 1.0.0.exe
+```
 
-## Next Steps
+### Installer Features
+- NSIS-based Windows installer
+- Automatic uninstaller creation
+- Start Menu shortcuts
+- Desktop shortcut (optional)
+- Add/Remove Programs entry
 
-1. **Review this plan** and confirm the approach
-2. **Set up Electron project structure**
-3. **Bundle Python backend** with PyInstaller
-4. **Integrate frontend build** with Electron
-5. **Implement system tray** and native notifications
-6. **Configure auto-start** functionality
-7. **Build installer** with electron-builder
-8. **Test thoroughly** on Windows 11
-9. **Create user documentation**
-10. **Deploy and distribute**
+### Sharing the Application
 
----
+1. **Share Installer**
+   - Distribute `Compliance Tracker Setup 1.0.0.exe`
+   - Users need Docker Desktop installed
+   - ~150-200 MB file size
 
-## Estimated Timeline
+2. **Requirements for Users**
+   - Windows 10/11 (64-bit)
+   - Docker Desktop for Windows
+   - 4GB RAM minimum
+   - 2GB free disk space
 
-- **Phase 1-2**: Setup & Backend Bundling - 2-3 hours
-- **Phase 3-4**: Electron Integration & Notifications - 3-4 hours
-- **Phase 5-6**: Auto-Start & Builder Config - 2-3 hours
-- **Phase 7**: Build & Testing - 2-3 hours
-- **Total**: 9-13 hours
+3. **Installation Instructions**
+   - Install Docker Desktop first
+   - Run Compliance Tracker installer
+   - Launch application
+   - Wait for containers to start
 
----
+## Security Considerations
 
-## Resources
+### Context Isolation
+- Enabled by default in preload.js
+- Prevents renderer process from accessing Node.js APIs directly
+- Uses contextBridge for safe IPC
 
-- [Electron Documentation](https://www.electronjs.org/docs/latest)
-- [Electron Builder](https://www.electron.build/)
-- [PyInstaller Documentation](https://pyinstaller.org/)
-- [Auto Launch](https://github.com/Teamwork/node-auto-launch)
-- [Electron Updater](https://www.electron.build/auto-update)
+### Docker Security
+- Containers run with user permissions
+- No privileged mode required
+- Data persisted in Docker volumes
 
----
+### Network Security
+- Backend API only accessible on localhost
+- No external network exposure
+- CORS configured for localhost only
 
-**Ready to proceed?** Let me know if you'd like to start implementing this plan!
+## Performance
+
+### Startup Time
+- Cold start: 30-60 seconds (Docker + containers)
+- Warm start: 10-20 seconds (Docker running)
+- Container restart: 5-10 seconds
+
+### Resource Usage
+- RAM: 500MB-1GB (Electron + containers)
+- CPU: Low (idle), Medium (startup)
+- Disk: 2GB (app + Docker images)
+
+### Optimization Tips
+1. Keep Docker Desktop running
+2. Enable auto-launch for faster access
+3. Use SSD for better container performance
+4. Close unused containers
+
+## Future Enhancements
+
+### Planned Features
+- [ ] Auto-update functionality
+- [ ] Offline mode support
+- [ ] Custom notification sounds
+- [ ] Multiple database profiles
+- [ ] Export/import data
+- [ ] Dark mode toggle
+- [ ] Keyboard shortcuts
+- [ ] Multi-language support
+
+### Known Limitations
+- Requires Docker Desktop (large dependency)
+- Windows-only (can be extended to macOS/Linux)
+- No offline functionality
+- Large installer size
+
+## Support
+
+### Getting Help
+1. Check this guide first
+2. View container logs for errors
+3. Check Docker Desktop status
+4. Restart application and containers
+
+### Common Issues
+- Docker not installed → Install Docker Desktop
+- Containers not starting → Check Docker Desktop
+- Port conflicts → Change ports in docker-compose.yml
+- Slow startup → Normal for first launch
+
+## License
+
+This desktop application is part of the Compliance Tracker project.
+See main project LICENSE file for details.
+
+## Credits
+
+Built with:
+- Electron (https://www.electronjs.org/)
+- Docker (https://www.docker.com/)
+- React (https://react.dev/)
+- FastAPI (https://fastapi.tiangolo.com/)
