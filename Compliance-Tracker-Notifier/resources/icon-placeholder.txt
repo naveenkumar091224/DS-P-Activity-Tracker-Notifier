@@ -1,0 +1,40 @@
+# Icon Placeholder Instructions
+
+Since we cannot create actual image files directly, you'll need to create the following icons:
+
+## Required Icons:
+
+### 1. icon.ico (256x256 or multi-resolution)
+- Main application icon for Windows
+- Should contain multiple resolutions: 16x16, 32x32, 48x48, 256x256
+- Use online tools like: https://www.icoconverter.com/
+
+### 2. icon.png (512x512)
+- High-resolution PNG version
+- Used for installer and app icon
+- Transparent background recommended
+
+### 3. tray-icon.png (16x16 or 32x32)
+- System tray icon (small)
+- Simple, recognizable design
+- Should be visible on both light and dark backgrounds
+
+## Quick Icon Creation Steps:
+
+1. **Design a simple icon** representing compliance/tracking (e.g., checkmark, clipboard, document)
+2. **Create PNG at 512x512** using any image editor (Paint, GIMP, Photoshop, Canva)
+3. **Convert to ICO** using online converter
+4. **Resize for tray** to 16x16 or 32x32
+
+## Temporary Solution:
+For testing purposes, you can:
+1. Find any .ico file on your system (e.g., from C:\Windows\System32\)
+2. Copy it as icon.ico
+3. Convert to PNG for other formats
+4. Replace with proper icons later
+
+## Icon Theme Suggestions:
+- Clipboard with checkmark ✓
+- Document with notification bell 🔔
+- Calendar with tasks 📅
+- Shield with checkmark (compliance theme) 🛡️

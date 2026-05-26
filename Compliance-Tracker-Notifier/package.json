@@ -1,0 +1,82 @@
+{
+  "name": "compliance-tracker-desktop",
+  "version": "1.0.0",
+  "description": "Compliance Tracker Desktop Application with Docker",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "build:frontend": "cd frontend && npm run build",
+    "build:electron": "electron-builder",
+    "build": "npm run build:frontend && npm run build:electron",
+    "build:win": "npm run build:frontend && electron-builder --win --x64",
+    "pack": "electron-builder --dir"
+  },
+  "keywords": [
+    "compliance",
+    "tracker",
+    "desktop",
+    "electron",
+    "docker"
+  ],
+  "author": "Naveen Kumar",
+  "license": "MIT",
+  "dependencies": {
+    "dockerode": "^4.0.2",
+    "electron-is-dev": "^2.0.0",
+    "auto-launch": "^5.0.6"
+  },
+  "devDependencies": {
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.ibm.compliancetracker",
+    "productName": "Compliance Tracker",
+    "directories": {
+      "buildResources": "resources",
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron/**/*",
+      "resources/**/*",
+      "node_modules/**/*"
+    ],
+    "asarUnpack": [
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "docker-compose.yml",
+        "to": "docker-compose.yml"
+      },
+      {
+        "from": "backend",
+        "to": "backend"
+      },
+      {
+        "from": "frontend/dist",
+        "to": "frontend/dist"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "resources/icon.png",
+      "artifactName": "${productName}-${version}-Portable.${ext}",
+      "signingHashAlgorithms": []
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Compliance Tracker",
+      "runAfterFinish": true
+    }
+  }
+}
